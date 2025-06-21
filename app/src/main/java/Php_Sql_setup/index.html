@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Call Logs Viewer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background-color: #f2f2f2;
+        }
+        h1 {
+            color: #333;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            background: white;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 12px;
+            text-align: center;
+        }
+        th {
+            background-color: #1565C0;
+            color: white;
+            cursor: pointer;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        #filter {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>📞 Call Logs Dashboard</h1>
+
+<label for="typeFilter">Filter by Type:</label>
+<select id="typeFilter" onchange="fetchLogs()">
+    <option value="">All</option>
+    <option value="Incoming">Incoming</option>
+    <option value="Outgoing">Outgoing</option>
+    <option value="Missed">Missed</option>
+</select>
+
+<table id="logTable">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Time</th>
+            <th>Type</th>
+            <th>Device Number</th>
+            <th>Client Number</th>
+            <th>Ring Duration (s)</th>
+            <th>Call Duration (s)</th>
+        </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+
+<script>
+    async function fetchLogs() {
+        const type = document.getElementById("typeFilter").value;
+        let url = "http://localhost/log_call_fetch.php"; // Your PHP fetch file
+
+        try {
+            const response = await fetch(url);
+            const logs = await response.json();
+
+            const tbody = document.querySelector("#logTable tbody");
+            tbody.innerHTML = "";
+
+            logs
+                .filter(log => !type || log.type === type)
+                .forEach(log => {
+                    const row = document.createElement("tr");
+                    row.innerHTML = `
+                        <td>${log.date}</td>
+                        <td>${log.time}</td>
+                        <td>${log.type}</td>
+                        <td>${log.device_number}</td>
+                        <td>${log.client_number}</td>
+                        <td>${log.ring_duration}</td>
+                        <td>${log.call_duration}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+
+        } catch (err) {
+            console.error("Error fetching logs:", err);
+            alert("Failed to load logs.");
+        }
+    }
+
+    fetchLogs();
+</script>
+
+<script>
+    let currentLogs = [];
+    let sortDirection = 1; // 1 = ascending, -1 = descending
+
+    async function fetchLogs() {
+        const type = document.getElementById("typeFilter").value;
+        const url = "http://localhost/log_call_fetch.php";
+
+        try {
+            const response = await fetch(url);
+            const logs = await response.json();
+            currentLogs = logs;
+
+            displayLogs(
+                logs.filter(log => !type || log.type === type)
+            );
+
+        } catch (err) {
+            console.error("Error fetching logs:", err);
+            alert("Failed to load logs.");
+        }
+    }
+
+    function displayLogs(logs) {
+        const tbody = document.querySelector("#logTable tbody");
+        tbody.innerHTML = "";
+
+        logs.forEach(log => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td>${log.date}</td>
+                <td>${log.time}</td>
+                <td>${log.type}</td>
+                <td>${log.device_number}</td>
+                <td>${log.client_number}</td>
+                <td>${log.ring_duration}</td>
+                <td>${log.call_duration}</td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    function sortLogsBy(field) {
+        currentLogs.sort((a, b) => {
+            const valA = a[field];
+            const valB = b[field];
+
+            if (!isNaN(valA) && !isNaN(valB)) {
+                return (valA - valB) * sortDirection;
+            }
+
+            return valA.localeCompare(valB) * sortDirection;
+        });
+
+        sortDirection *= -1; // reverse next time
+        displayLogs(currentLogs);
+    }
+
+    // Add event listeners to table headers
+    document.addEventListener("DOMContentLoaded", () => {
+        fetchLogs();
+
+        const headers = document.querySelectorAll("#logTable th");
+        const fields = ["date", "time", "type", "device_number", "client_number", "ring_duration", "call_duration"];
+
+        headers.forEach((header, index) => {
+            header.style.cursor = "pointer";
+            header.addEventListener("click", () => sortLogsBy(fields[index]));
+        });
+    });
+</script>
+
+
+</body>
+</html>
